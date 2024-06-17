@@ -15,3 +15,4 @@ jobs:
         run: "go test -cover -coverprofile cover -race -test.v -timeout 30s ./..."
         env:
           X_API_KEY: "${{ secrets.X_API_KEY }}"
+          API_URL: "${{ secrets.API_URL }}"

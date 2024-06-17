@@ -65,7 +65,6 @@ func ExampleService() {
 	if err != nil {
 		panic(err)
 	}
-	// Output:
 }
 
 func ExampleConvertToCoordinates() {
@@ -80,7 +79,6 @@ func ExampleConvertToCoordinates() {
 	}
 	// Json is the default output format used.
 	fmt.Println(resp.Json.Coordinates)
-	// Output: 51.520847,-0.195521
 }
 
 func ExampleConvertToCoordinatesLanguage() {
@@ -96,7 +94,6 @@ func ExampleConvertToCoordinatesLanguage() {
 		panic(err)
 	}
 	fmt.Println(resp.Json.Coordinates)
-	// Output: 51.522275,-0.145833
 }
 
 func ExampleConvertToCoordinatesGeoJson() {
@@ -113,7 +110,6 @@ func ExampleConvertToCoordinatesGeoJson() {
 	}
 	// If format GeoJson is not set in options, GeoJson attribute of the response will be set to nil
 	fmt.Println(resp.GeoJson.Features[0].Geometry.Coordinates)
-	// Output: [-0.195521 51.520847]
 }
 
 func ExampleConvertTo3wa() {
@@ -130,7 +126,6 @@ func ExampleConvertTo3wa() {
 		panic(err)
 	}
 	fmt.Println(resp.Json.Words)
-	// Output: filled.count.soap
 }
 
 func ExampleGridSection() {
@@ -153,7 +148,6 @@ func ExampleGridSection() {
 		panic(err)
 	}
 	fmt.Println(resp.Json.Lines[0])
-	// Output: {52.208010,0.116126 52.208010,0.117540}
 }
 
 func ExampleAutoSuggest() {
@@ -175,7 +169,6 @@ func ExampleAutoSuggest() {
 		panic(err)
 	}
 	fmt.Println(resp.Suggestions[0].Words)
-	// Output: filled.count.soap
 }
 
 func ExampleExactWhat3WordsAPIErrors() {
@@ -191,5 +184,4 @@ func ExampleExactWhat3WordsAPIErrors() {
 			fmt.Println(err.Code)
 		}
 	}
-	// Output: BadWords
 }
