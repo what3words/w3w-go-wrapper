@@ -1,0 +1,17 @@
+name: "Unit tests"
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          cache: false # No Dependencies used, enable if any dependencies are used in the future
+      - name: "Run unit tests"
+        run: "go test -cover -coverprofile cover -race -test.v -timeout 30s ./..."
+        env:
+          X_API_KEY: "${{ secrets.X_API_KEY }}"
