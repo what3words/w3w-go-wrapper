@@ -1,6 +1,6 @@
 # <img src="https://what3words.com/assets/images/w3w_square_red.png" width="64" height="64" alt="what3words">&nbsp;w3w-go-wrapper
 
-A Go library to make requests to the [what3words REST API][api]. See the what3words public API [documentation](apidocs) for more information about how to use our REST API.
+A Go library to make requests to the [what3words REST API](https://developer.what3words.com/public-api/). See the what3words public API [documentation](https://developer.what3words.com/public-api/docs) for more information about how to use our REST API.
 
 ## Overview
 
