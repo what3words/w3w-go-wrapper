@@ -210,3 +210,89 @@ func main() {
     fmt.Println(resp)
 }
 ```
+
+### Find Possible 3 Word Addresses
+
+FindPossible3wa searches the string passed in for all substrings in the form of a three word address.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	w3w "github.com/what3words/w3w-go-wrapper"
+)
+
+func main() {
+	apiKey := "<YOUR_API_KEY>"
+	svc := w3w.NewService(apiKey)
+	text := `This is a valid 3 word address filled.count.soap`
+	pa := svc.FindPossible3wa(text)
+	fmt.Println(pa)
+}
+```
+
+### Is Possible 3 Word Address
+
+IsPossible3wa determines if the string passed in is in the form of a three word address.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	w3w "github.com/what3words/w3w-go-wrapper"
+)
+
+func main() {
+	apiKey := "<YOUR_API_KEY>"
+	svc := w3w.NewService(apiKey)
+	pa := svc.IsPossible3wa("filled.count.fake")
+	fmt.Println(pa)
+}
+```
+
+### Did you Mean
+
+DidYouMean determines if the string passed in is almost in the form of a three word address.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	w3w "github.com/what3words/w3w-go-wrapper"
+)
+
+func main() {
+	apiKey := "<YOUR_API_KEY>"
+	svc := w3w.NewService(apiKey)
+	pa := svc.DidYouMean("filled-count-fake")
+	fmt.Println(pa)
+}
+```
+
+### Is Valid 3 word address
+
+IsValid3wa validates the given string as a real three-word address by making a call to the API. The context can be used to cancel the underlying call.
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+
+	w3w "github.com/what3words/w3w-go-wrapper"
+)
+
+func main() {
+	apiKey := "<YOUR_API_KEY>"
+	svc := w3w.NewService(apiKey)
+	pa := svc.IsValid3wa(context.Background(), "filled.count.soap")
+	fmt.Println(pa)
+}
+```

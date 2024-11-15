@@ -3,7 +3,6 @@ package w3wgowrapper_test
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"reflect"
@@ -16,13 +15,15 @@ import (
 
 var (
 	apiURL = os.Getenv("API_URL")
+	apiKey = os.Getenv("X_API_KEY")
 )
 
-type MockAPI struct {
+type CustomClient struct {
+	http.Client
 	t *testing.T
 }
 
-func (m MockAPI) Do(req *http.Request) (*http.Response, error) {
+func (m CustomClient) Do(req *http.Request) (*http.Response, error) {
 
 	if !strings.HasPrefix(req.URL.String(), apiURL) {
 		m.t.Fatalf("ERROR: unexpected API URL: %s", req.URL.String())
@@ -32,18 +33,16 @@ func (m MockAPI) Do(req *http.Request) (*http.Response, error) {
 		m.t.Fatalf("ERROR: unexpected header: %s", req.Header.Get("x-temp-header"))
 	}
 
-	return &http.Response{
-		StatusCode: 200,
-		Body:       io.NopCloser(strings.NewReader("{}")),
-	}, nil
+	resp, err := m.Client.Do(req)
+
+	return resp, err
 }
 
 func setupSvc(t *testing.T) w3w.Service {
-	apiKey := os.Getenv("X_API_KEY")
 	if apiKey == "" {
 		t.Fatal("ERROR: X_API_KEY is empty or not found")
 	}
-	httpClient := MockAPI{t}
+	httpClient := CustomClient{*http.DefaultClient, t}
 	svc := w3w.NewService(apiKey, w3w.WithClient(httpClient), w3w.WithCustomHeader("x-temp-header", "temp"), w3w.WithCustomBaseURL(apiURL))
 	return svc
 }
@@ -66,6 +65,60 @@ func TestFindPossible3wa(t *testing.T) {
 	}
 	if !reflect.DeepEqual(pa, expected) {
 		t.Fatalf("ERROR: expected to find %v, but found %v", expected, pa)
+	}
+}
+
+func TestDidYouMean(t *testing.T) {
+	w3wAPI := setupSvc(t)
+	valid := []string{"filled.count.soap", "filled-count-soap"}
+	invalid := []string{"filled.count", "filled.count."}
+
+	for _, v := range valid {
+		if !w3wAPI.DidYouMean(v) {
+			t.Fatalf("ERROR: %v is a valid what3words form but it was not identified", v)
+		}
+	}
+
+	for _, v := range invalid {
+		if w3wAPI.DidYouMean(v) {
+			t.Fatalf("ERROR: %v is an invalid what3words form but it was identified", v)
+		}
+	}
+}
+
+func TestIsPossible3wa(t *testing.T) {
+	w3wAPI := setupSvc(t)
+	valid := []string{"filled.count.soap"}
+	invalid := []string{"filled.count", "filled.count.", "filled-count-soap"}
+
+	for _, v := range valid {
+		if !w3wAPI.IsPossible3wa(v) {
+			t.Fatalf("ERROR: %v is a valid what3words but it was not identified", v)
+		}
+	}
+
+	for _, v := range invalid {
+		if w3wAPI.IsPossible3wa(v) {
+			t.Fatalf("ERROR: %v is an invalid what3words form but it was identified", v)
+		}
+	}
+}
+
+func TestIsValid3wa(t *testing.T) {
+	w3wAPI := setupSvc(t)
+	valid := []string{"filled.count.soap"}
+	invalid := []string{"nuts.bolts.tires"}
+
+	for _, v := range valid {
+		if !w3wAPI.IsValid3wa(context.Background(), v) {
+			t.Fatalf("ERROR: %v is a valid what3words but it was not identified", v)
+		}
+	}
+
+	for _, v := range invalid {
+		if w3wAPI.IsValid3wa(context.Background(), v) {
+			t.Fatalf("ERROR: %v is an invalid what3words form but it was identified", v)
+		}
 	}
 }
 
