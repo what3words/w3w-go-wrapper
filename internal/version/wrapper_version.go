@@ -3,5 +3,5 @@
 package version
 
 func wrapper_version() string {
-	return ""
+	return "1.0.0"
 }
