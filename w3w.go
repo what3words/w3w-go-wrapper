@@ -1,28 +1,46 @@
 package w3wgowrapper
 
 import (
+	"context"
+	"regexp"
+
 	"github.com/what3words/w3w-go-wrapper/internal/client"
 	v3 "github.com/what3words/w3w-go-wrapper/pkg/apis/v3"
+	"github.com/what3words/w3w-go-wrapper/pkg/core"
+)
+
+var (
+	regexFind3wa       = regexp.MustCompile(`[^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}[.｡。･・︒។։။۔።।][^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}[.｡。･・︒។։။۔።।][^0-9x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}`)
+	regexIsPossible3wa = regexp.MustCompile(`^/*(?:[^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}[.｡。･・︒។։။۔።।][^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}[.｡。･・︒។։။۔።।][^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}|[^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}([\x{0020}\x{00A0}][^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]+){1,3}[.｡。･・︒។։။۔።।][^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}([\x{0020}\x{00A0}][^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]+){1,3}[.｡。･・︒។։။۔።।][^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}([\x{0020}\x{00A0}][^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]+){1,3})$`)
+	regexDidYouMean    = regexp.MustCompile(`^/?[^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}[.\x{FF61}\x{3002}\x{FF65}\x{30FB}\x{FE12}\x{17D4}\x{0964}\x{1362}\x{3002}:။^_۔։ ,\\/+'&\\:;|\x{3000}-]{1,2}[^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}[.\x{FF61}\x{3002}\x{FF65}\x{30FB}\x{FE12}\x{17D4}\x{0964}\x{1362}\x{3002}:။^_۔։ ,\\/+'&\\:;|\x{3000}-]{1,2}[^0-9\x60~!@#$%^&*()+\-_=\[\{\]}\\|'<>.,?/;:£§º©®\s]{1,}$`)
 )
 
 // Service wraps the what3words public Service with each
 // version of the API available under its own
-// attibute. A call for example to the v3/available-languages
+// method. A call for example to the v3/available-languages
 // api would be made as such
 //
-// svc := NewService(ServiceKey)
+// svc := NewService(apiKey)
 //
-// languages, err := svc.V3.AvailableLanguages(context.Background())
+// languages, err := svc.V3().AvailableLanguages(context.Background())
 //
 //	if err != nil {
 //		return err
 //	}
-
-type Service struct {
-	V3 *v3.API
+//go:generate mockery --name Service --output ./mocks --outpkg mocks --case underscore
+type Service interface {
+	V3() v3.API
+	FindPossible3wa(input string) []string
+	IsPossible3wa(input string) bool
+	IsValid3wa(ctx context.Context, input string) bool
+	DidYouMean(input string) bool
 }
 
-type ServiceOpts func(*Service)
+type service struct {
+	v3api v3.API
+}
+
+type ServiceOpts func(*service)
 
 // WithCustomBaseURL allows you to set a custom base url
 // for the what3words service. This is useful for testing or when calling an
@@ -40,8 +58,8 @@ type ServiceOpts func(*Service)
 //		return err
 //	}
 func WithCustomBaseURL(baseURL string) ServiceOpts {
-	return func(Service *Service) {
-		v3.WithCustomBaseURL(baseURL)(Service.V3)
+	return func(svc *service) {
+		svc.v3api.SetBaseURL(baseURL)
 	}
 }
 
@@ -61,8 +79,8 @@ func WithCustomBaseURL(baseURL string) ServiceOpts {
 //		return err
 //	}
 func WithCustomHeader(key, value string) ServiceOpts {
-	return func(Service *Service) {
-		v3.WithCustomHeader(key, value)(Service.V3)
+	return func(svc *service) {
+		svc.v3api.SetHeader(key, value)
 	}
 }
 
@@ -79,8 +97,8 @@ func WithCustomHeader(key, value string) ServiceOpts {
 //
 // Service := NewService(ServiceKey, WithClient(&http.Client{})
 func WithClient(client client.HttpClient) ServiceOpts {
-	return func(Service *Service) {
-		v3.WithClient(client)(Service.V3)
+	return func(svc *service) {
+		svc.v3api.SetClient(client)
 	}
 }
 
@@ -88,19 +106,48 @@ func WithClient(client client.HttpClient) ServiceOpts {
 // service. Construct a v3 service with the w3w-go-wrapper/pkg/v3 NewService
 // function and set it.
 // Usefull if you want to set Custom anything specific to a version
-func WithV3API(v3 *v3.API) ServiceOpts {
-	return func(Service *Service) {
-		Service.V3 = v3
+func WithV3API(v3 v3.API) ServiceOpts {
+	return func(svc *service) {
+		svc.v3api = v3
 	}
 }
 
 // NewService creates a new what3words Service wrapper
-func NewService(ServiceKey string, opts ...ServiceOpts) *Service {
-	Service := &Service{
-		V3: v3.NewAPI(ServiceKey),
+func NewService(ServiceKey string, opts ...ServiceOpts) Service {
+	svc := service{
+		v3api: v3.NewAPI(ServiceKey),
 	}
 	for _, opt := range opts {
-		opt(Service)
+		opt(&svc)
 	}
-	return Service
+	return svc
+}
+
+func (svc service) V3() v3.API {
+	return svc.v3api
+}
+
+func (svc service) FindPossible3wa(input string) []string {
+	return regexFind3wa.FindAllString(input, -1)
+}
+
+func (svc service) IsPossible3wa(input string) bool {
+	return regexIsPossible3wa.MatchString(input)
+}
+
+func (svc service) IsValid3wa(ctx context.Context, input string) bool {
+	if svc.IsPossible3wa(input) {
+		if resp, err := svc.V3().AutoSuggest(ctx, input, &v3.AutoSuggestOpts{
+			NResults: core.Int(1),
+		}); err != nil {
+			if len(resp.Suggestions) >= 1 {
+				return resp.Suggestions[0].Words == input
+			}
+		}
+	}
+	return false
+}
+
+func (svc service) DidYouMean(input string) bool {
+	return regexDidYouMean.MatchString(input)
 }

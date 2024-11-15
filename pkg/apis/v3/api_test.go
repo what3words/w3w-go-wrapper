@@ -52,7 +52,7 @@ var c23waGeoJson = `{"features":[{"bbox":[-1.246252,51.751159,-1.246208,51.75118
 // 	}
 // }
 
-func setupAPI(t *testing.T) *v3.API {
+func setupAPI(t *testing.T) v3.API {
 	apiKey := os.Getenv("X_API_KEY")
 	if apiKey == "" {
 		t.Fatal("ERROR: X_API_KEY is empty or not found")
@@ -63,100 +63,69 @@ func setupAPI(t *testing.T) *v3.API {
 }
 
 func TestConvertToCoordinatesJSON(t *testing.T) {
-	resp, err := setupAPI(t).ConvertToCoordinates(context.Background(), "filled.count.soap", nil)
+	resp, err := setupAPI(t).ConvertToCoordinatesJson(context.Background(), "filled.count.soap", nil)
 	if err != nil {
 		t.Fatalf("ERROR: Failed to get cordinates from API due to err : %v", err)
 	}
-	if resp.GeoJson != nil {
-		t.Fatal("ERROR: GeoJson output should be set to nil since format by default is json")
-	}
-	if resp.Json == nil {
-		t.Fatal("ERROR: Json should have value since format by default is json")
-	}
-
 	var expected v3.ConvertAPIJsonResponse
 	json.Unmarshal([]byte(c2cJson), &expected)
-	if !reflect.DeepEqual(expected, *resp.Json) {
-		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected, *resp.Json)
+	if !reflect.DeepEqual(expected, *resp) {
+		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected, *resp)
 	}
 }
 
 func TestConvertToCoordinatesGeoJSON(t *testing.T) {
-	resp, err := setupAPI(t).ConvertToCoordinates(context.Background(), "filled.count.soap", &v3.ConvertAPIOpts{
-		Format: v3.ResponseFormatGeoJson,
-	})
+	resp, err := setupAPI(t).ConvertToCoordinatesGeoJson(context.Background(), "filled.count.soap", nil)
 	if err != nil {
 		t.Fatalf("ERROR: Failed to get cordinates from API due to err : %v", err)
 	}
-	if resp.GeoJson == nil {
-		t.Fatal("ERROR: GeoJson output should be set since format has been overidden to use geojson")
-	}
-	if resp.Json != nil {
-		t.Fatal("ERROR: Json output should be nil since format has been overidden to use geojson")
-	}
-
 	var expected v3.ConvertAPIGeoJsonResponse
 	json.Unmarshal([]byte(c2cGeoJson), &expected)
-	if !reflect.DeepEqual(expected, *resp.GeoJson) {
-		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected, *resp.GeoJson)
+	if !reflect.DeepEqual(expected, *resp) {
+		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected, *resp)
 	}
 }
 
 func TestConvertToCoordinatesInvalidWords(t *testing.T) {
-	_, err := setupAPI(t).ConvertToCoordinates(context.Background(), "fill.fake.fill", nil)
+	_, err := setupAPI(t).ConvertToCoordinatesJson(context.Background(), "fill.fake.fill", nil)
 	if err == nil {
 		t.Fatal("ERROR: error should be set to BadWords")
 	}
 }
 
 func TestConvertTo3WAJSON(t *testing.T) {
-	resp, err := setupAPI(t).ConvertTo3wa(context.Background(), core.Coordinates{
+	resp, err := setupAPI(t).ConvertTo3waJson(context.Background(), core.Coordinates{
 		Lng: -1.24623,
 		Lat: 51.751172,
 	}, nil)
 	if err != nil {
 		t.Fatalf("ERROR: Failed to get cordinates from API due to err : %v", err)
 	}
-	if resp.GeoJson != nil {
-		t.Fatal("ERROR: GeoJson output should be set to nil since format by default is json")
-	}
-	if resp.Json == nil {
-		t.Fatal("ERROR: Json should have value since format by default is json")
-	}
 
 	var expected v3.ConvertAPIJsonResponse
 	json.Unmarshal([]byte(c23waJson), &expected)
-	if !reflect.DeepEqual(expected, *resp.Json) {
-		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected.Words, resp.Json.Words)
+	if !reflect.DeepEqual(expected, *resp) {
+		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected.Words, resp.Words)
 	}
 }
 
 func TestConvertTo3WAGeoJSON(t *testing.T) {
-	resp, err := setupAPI(t).ConvertTo3wa(context.Background(), core.Coordinates{
+	resp, err := setupAPI(t).ConvertTo3waGeoJson(context.Background(), core.Coordinates{
 		Lng: -1.24623,
 		Lat: 51.751172,
-	}, &v3.ConvertAPIOpts{
-		Format: v3.ResponseFormatGeoJson,
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("ERROR: Failed to get cordinates from API due to err : %v", err)
 	}
-	if resp.GeoJson == nil {
-		t.Fatal("ERROR: GeoJson output should be set since format has been overidden to use geojson")
-	}
-	if resp.Json != nil {
-		t.Fatal("ERROR: Json output should be nil since format has been overidden to use geojson")
-	}
-
 	var expected v3.ConvertAPIGeoJsonResponse
 	json.Unmarshal([]byte(c23waGeoJson), &expected)
-	if !reflect.DeepEqual(expected, *resp.GeoJson) {
-		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected, *resp.GeoJson)
+	if !reflect.DeepEqual(expected, *resp) {
+		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected, *resp)
 	}
 }
 
 func TestConvertTo3WAInvalidWords(t *testing.T) {
-	_, err := setupAPI(t).ConvertToCoordinates(context.Background(), "fill.fake.fill", nil)
+	_, err := setupAPI(t).ConvertToCoordinatesJson(context.Background(), "fill.fake.fill", nil)
 	if err == nil {
 		t.Fatal("ERROR: error should be set to BadWords")
 	}
@@ -168,7 +137,7 @@ func TestConvertTo3WAInvalidWords(t *testing.T) {
 
 func TestGridSectionJSON(t *testing.T) {
 
-	resp, err := setupAPI(t).GridSection(context.Background(), v3.BoundingBox{
+	_, err := setupAPI(t).GridSectionJson(context.Background(), v3.BoundingBox{
 		SouthWest: core.Coordinates{
 			Lat: 52.207988,
 			Lng: 0.116126,
@@ -177,33 +146,6 @@ func TestGridSectionJSON(t *testing.T) {
 			Lat: 52.208867,
 			Lng: 0.117540,
 		},
-	}, nil)
-	if err != nil {
-		t.Fatalf("ERROR: Failed to get grid section from API - %v", err)
-	}
-	if err != nil {
-		t.Fatalf("ERROR: Failed to get cordinates from API due to err : %v", err)
-	}
-	if resp.GeoJson != nil {
-		t.Fatal("ERROR: GeoJson output should be set to nil since format by default is json")
-	}
-	if resp.Json == nil {
-		t.Fatal("ERROR: Json should have value since format by default is json")
-	}
-}
-
-func TestGridSectionGeoJSON(t *testing.T) {
-	resp, err := setupAPI(t).GridSection(context.Background(), v3.BoundingBox{
-		SouthWest: core.Coordinates{
-			Lat: 52.207988,
-			Lng: 0.116126,
-		},
-		NorthEast: core.Coordinates{
-			Lat: 52.208867,
-			Lng: 0.117540,
-		},
-	}, &v3.GridSectionOpts{
-		Format: v3.ResponseFormatGeoJson,
 	})
 	if err != nil {
 		t.Fatalf("ERROR: Failed to get grid section from API - %v", err)
@@ -211,11 +153,24 @@ func TestGridSectionGeoJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ERROR: Failed to get cordinates from API due to err : %v", err)
 	}
-	if resp.GeoJson == nil {
-		t.Fatal("ERROR: GeoJson output should be set since format has been overidden to use geojson")
+}
+
+func TestGridSectionGeoJSON(t *testing.T) {
+	_, err := setupAPI(t).GridSectionGeoJson(context.Background(), v3.BoundingBox{
+		SouthWest: core.Coordinates{
+			Lat: 52.207988,
+			Lng: 0.116126,
+		},
+		NorthEast: core.Coordinates{
+			Lat: 52.208867,
+			Lng: 0.117540,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ERROR: Failed to get grid section from API - %v", err)
 	}
-	if resp.Json != nil {
-		t.Fatal("ERROR: Json output should be nil since format has been overidden to use geojson")
+	if err != nil {
+		t.Fatalf("ERROR: Failed to get cordinates from API due to err : %v", err)
 	}
 }
 
@@ -423,7 +378,7 @@ func TestThreadSafety(t *testing.T) {
 	for i := 0; i < count; i++ {
 		go func() {
 			defer wg.Done()
-			_, err := svc.ConvertToCoordinates(context.Background(), "filled.count.soap", nil)
+			_, err := svc.ConvertToCoordinatesJson(context.Background(), "filled.count.soap", nil)
 			if err != nil {
 				t.Errorf("ERROR: Failed to get coordinates from API - %v", err)
 			}

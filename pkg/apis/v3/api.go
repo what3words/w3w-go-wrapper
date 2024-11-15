@@ -15,28 +15,70 @@ import (
 // endpoint having its own corresponding methods that would
 // return strictly typed structures or errors.
 // APIOptions can be used to add/modify aspects of
-// the API Controller.
+// the API Controller when creating with the NewAPI function
 //
 // By default:
 //
 //	baseURL: https://api.what3words.com
 //	headers: None
 //	client: http.DefaultClient
-//
-// TOOD: Change to API
-type API struct {
+//go:generate mockery --name API --output ./mocks --outpkg mocks --case underscore
+type API interface {
+	// Setters
+	SetBaseURL(baseURL string)
+	SetHeader(headerKey, headerValue string)
+	SetHeaderMap(headers map[string]string)
+	SetClient(client client.HttpClient)
+
+	// Endpoints
+
+	// ConvertTo3waJson wraps around /v3/convert-to-3wa which will convert a latitude
+	// and longitude pair to a 3 word address, in the language of your choice. It also returns country,
+	// the bounds of the grid square, a nearby place (such as a local town) and a link to our map site.
+	// Returns response in the `json` format.
+	ConvertTo3waJson(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error)
+	// ConvertTo3waJson wraps around /v3/convert-to-3wa which will convert a latitude
+	// and longitude pair to a 3 word address, in the language of your choice. It also returns country,
+	// the bounds of the grid square, a nearby place (such as a local town) and a link to our map site.
+	// Returns response in the `geojson` format.
+	ConvertTo3waGeoJson(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIGeoJsonResponse, error)
+	ConvertToCoordinatesJson(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error)
+	ConvertToCoordinatesGeoJson(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIGeoJsonResponse, error)
+	GridSectionJson(ctx context.Context, boundingBox BoundingBox) (*GridSectionJsonResponse, error)
+	GridSectionGeoJson(ctx context.Context, boundingBox BoundingBox) (*GridSectionGeoJsonResponse, error)
+	AutoSuggest(ctx context.Context, input string, opts *AutoSuggestOpts) (*AutoSuggestResponse, error)
+	AvailableLanguages(ctx context.Context) (*AvailableLanguagesResponse, error)
+}
+
+type api struct {
 	baseURL string
 	headers map[string]string
 	client  client.HttpClient
 }
 
-type APIOption func(*API)
+func (a *api) SetBaseURL(baseURL string) {
+	a.baseURL = fmt.Sprintf("%s/v3", baseURL)
+}
+
+func (a *api) SetHeader(headerKey, headerValue string) {
+	a.headers[headerKey] = headerValue
+}
+
+func (a *api) SetHeaderMap(headers map[string]string) {
+	a.headers = headers
+}
+
+func (a *api) SetClient(client client.HttpClient) {
+	a.client = client
+}
+
+type APIOption func(*api)
 
 // WithCustomHeader sets a new custom header which
 // would be sent with every request made through
 // this API
 func WithCustomHeader(key, value string) APIOption {
-	return func(vs *API) {
+	return func(vs *api) {
 		vs.headers[key] = value
 	}
 }
@@ -45,8 +87,8 @@ func WithCustomHeader(key, value string) APIOption {
 // to set the underlying http client, If a non default
 // http client is required. For example use a custom
 // transport layer or to mock the API.
-func WithClient(client client.HttpClient) func(*API) {
-	return func(vs *API) {
+func WithClient(client client.HttpClient) func(*api) {
+	return func(vs *api) {
 		vs.client = client
 	}
 }
@@ -55,84 +97,109 @@ func WithClient(client client.HttpClient) func(*API) {
 // overdide the defaut base api url. V3 would be suffixed
 // to the provided input making the whole address follow
 // this pattern <base_url>/v3/<endpoint>
-func WithCustomBaseURL(baseURL string) func(*API) {
-	return func(vs *API) {
+func WithCustomBaseURL(baseURL string) func(*api) {
+	return func(vs *api) {
 		vs.baseURL = fmt.Sprintf("%s/v3", baseURL)
 	}
 }
 
 // NewAPI creates a new what3words API Controller.
-func NewAPI(apiKey string, opts ...APIOption) *API {
+func NewAPI(apiKey string, opts ...APIOption) API {
 	headers := make(map[string]string)
 	headers[core.HEADER_API_KEY] = apiKey
 	headers[core.HEADER_WRAPPER] = version.ResolveWrapperHeader()
 	baseURL := core.BASE_URL
-	svc := &API{
+	a := &api{
 		fmt.Sprintf("%s/v3", baseURL),
 		headers,
 		http.DefaultClient,
 	}
 	for _, opt := range opts {
-		opt(svc)
+		opt(a)
 	}
-	return svc
+	return a
 }
 
-// ConvertTo3wa wraps around /v3/convert-to-3wa which will convert a latitude
-// and longitude pair to a 3 word address, in the language of your choice. It also returns country,
-// the bounds of the grid square, a nearby place (such as a local town) and a link to our map site.
-func (svc API) ConvertTo3wa(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIResponse, error) {
+func (a api) convertTo3wa(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts, format string) (*convertAPIResponse, error) {
 	var c2cResponse convertAPIResponse
 	queryParams := make(map[string]string)
-	queryParams["coordinates"] = coordinates.String()
+	queryParams["coordinates"] = coordinates.AsQueryParam()
+	queryParams["format"] = format
 	if opts != nil {
 		maps.Copy(queryParams, opts.asOptionsMap())
 	}
 	err := core.MakeGetRequest(
 		ctx,
-		svc.client,
-		svc.baseURL,
+		a.client,
+		a.baseURL,
 		queryParams,
-		svc.headers,
+		a.headers,
 		&c2cResponse,
 		"convert-to-3wa",
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &ConvertAPIResponse{
-		Json:    c2cResponse.ConvertAPIJsonResponse,
-		GeoJson: c2cResponse.ConvertAPIGeoJsonResponse,
-	}, nil
+	return &c2cResponse, nil
+}
+
+func (a api) ConvertTo3waJson(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error) {
+	resp, err := a.convertTo3wa(ctx, coordinates, opts, "json")
+	if err != nil {
+		return nil, err
+	}
+	return resp.ConvertAPIJsonResponse, nil
+}
+
+func (a api) ConvertTo3waGeoJson(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIGeoJsonResponse, error) {
+	resp, err := a.convertTo3wa(ctx, coordinates, opts, "geojson")
+	if err != nil {
+		return nil, err
+	}
+	return resp.ConvertAPIGeoJsonResponse, nil
 }
 
 // ConvertToCoordinates wraps around /v3/convert-to-coordinates which will
 // convert a 3 word address to a latitude and longitude pair. It also returns
 // country, the bounds of the grid square, a nearest place (such as a local town)
 // and a link to our map site.
-func (svc API) ConvertToCoordinates(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIResponse, error) {
+func (a api) convertToCoordinates(ctx context.Context, words string, opts *ConvertAPIOpts, format string) (*convertAPIResponse, error) {
 	var c2cResponse convertAPIResponse
 	queryParams := make(map[string]string)
 	queryParams["words"] = words
+	queryParams["format"] = format
 	if opts != nil {
 		maps.Copy(queryParams, opts.asOptionsMap())
 	}
 	err := core.MakeGetRequest(
 		ctx,
-		svc.client,
-		svc.baseURL,
+		a.client,
+		a.baseURL,
 		queryParams,
-		svc.headers,
+		a.headers,
 		&c2cResponse,
 		"convert-to-coordinates",
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &ConvertAPIResponse{
-		Json:    c2cResponse.ConvertAPIJsonResponse,
-		GeoJson: c2cResponse.ConvertAPIGeoJsonResponse,
-	}, nil
+	return &c2cResponse, nil
+}
+
+func (a api) ConvertToCoordinatesJson(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error) {
+	resp, err := a.convertToCoordinates(ctx, words, opts, "json")
+	if err != nil {
+		return nil, err
+	}
+	return resp.ConvertAPIJsonResponse, nil
+}
+
+func (a api) ConvertToCoordinatesGeoJson(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIGeoJsonResponse, error) {
+	resp, err := a.convertToCoordinates(ctx, words, opts, "geojson")
+	if err != nil {
+		return nil, err
+	}
+	return resp.ConvertAPIGeoJsonResponse, nil
 }
 
 // AutoSuggest wraps around /v3/autosuggest endpoint which takes slightly
@@ -173,7 +240,7 @@ func (svc API) ConvertToCoordinates(ctx context.Context, words string, opts *Con
 // to help the API in situations where the input is particularly messy. For normal text input,
 // the language parameter is optional, and AutoSuggest will work well even without a language parameter.
 // However, for voice input the language should always be specified.
-func (svc API) AutoSuggest(ctx context.Context, input string, opts *AutoSuggestOpts) (*AutoSuggestResponse, error) {
+func (a api) AutoSuggest(ctx context.Context, input string, opts *AutoSuggestOpts) (*AutoSuggestResponse, error) {
 	var autoSuggest autoSuggestResponse
 	queryParams := make(map[string]string)
 	queryParams["input"] = input
@@ -183,10 +250,10 @@ func (svc API) AutoSuggest(ctx context.Context, input string, opts *AutoSuggestO
 	}
 	err := core.MakeGetRequest(
 		ctx,
-		svc.client,
-		svc.baseURL,
+		a.client,
+		a.baseURL,
 		queryParams,
-		svc.headers,
+		a.headers,
 		&autoSuggest,
 		"autosuggest",
 	)
@@ -200,29 +267,40 @@ func (svc API) AutoSuggest(ctx context.Context, input string, opts *AutoSuggestO
 // section of the 3m x 3m what3words grid for a bounding box. The bounding box
 // is specified by lat,lng,lat,lng as south,west,north,east. You can request the
 // grid in GeoJSON format, making it very simple to display on a map.
-func (svc API) GridSection(ctx context.Context, boundingBox BoundingBox, opts *GridSectionOpts) (*GridSectionResponse, error) {
+func (a api) gridSection(ctx context.Context, boundingBox BoundingBox, format string) (*gridSectionResponse, error) {
 	var gridSection gridSectionResponse
 	queryParams := make(map[string]string)
-	queryParams["bounding-box"] = boundingBox.String()
-	if opts != nil {
-		maps.Copy(queryParams, opts.asOptionsMap())
-	}
+	queryParams["bounding-box"] = boundingBox.asQueryParam()
+	queryParams["format"] = format
 	err := core.MakeGetRequest(
 		ctx,
-		svc.client,
-		svc.baseURL,
+		a.client,
+		a.baseURL,
 		queryParams,
-		svc.headers,
+		a.headers,
 		&gridSection,
 		"grid-section",
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &GridSectionResponse{
-		Json:    gridSection.GridSectionJsonResponse,
-		GeoJson: gridSection.GridSectionGeoJsonResponse,
-	}, nil
+	return &gridSection, nil
+}
+
+func (a api) GridSectionJson(ctx context.Context, boundingBox BoundingBox) (*GridSectionJsonResponse, error) {
+	resp, err := a.gridSection(ctx, boundingBox, "json")
+	if err != nil {
+		return nil, err
+	}
+	return resp.GridSectionJsonResponse, nil
+}
+
+func (a api) GridSectionGeoJson(ctx context.Context, boundingBox BoundingBox) (*GridSectionGeoJsonResponse, error) {
+	resp, err := a.gridSection(ctx, boundingBox, "geojson")
+	if err != nil {
+		return nil, err
+	}
+	return resp.GridSectionGeoJsonResponse, nil
 }
 
 // AvailableLanguages wraps around /v3/available-languages which will
@@ -230,9 +308,9 @@ func (svc API) GridSection(ctx context.Context, boundingBox BoundingBox, opts *G
 // including the ISO 3166-1 alpha-2 2 letter code, English name and native name.
 // Bosnian-Croatian-Montenegrin-Serbian is available using the language code 'oo' with
 // Cyrillic and Latin locales ('oo_cy' and 'oo_la')
-func (svc API) AvailableLanguages(ctx context.Context) (*AvailableLanguagesResponse, error) {
+func (a api) AvailableLanguages(ctx context.Context) (*AvailableLanguagesResponse, error) {
 	var availableLanguages availableLanguagesResponse
-	err := core.MakeGetRequest(ctx, svc.client, svc.baseURL, map[string]string{}, svc.headers, &availableLanguages, "available-languages")
+	err := core.MakeGetRequest(ctx, a.client, a.baseURL, map[string]string{}, a.headers, &availableLanguages, "available-languages")
 	if err != nil {
 		return nil, err
 	}

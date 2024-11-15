@@ -10,23 +10,12 @@ import (
 
 type Coordinates = core.Coordinates
 
-// ResponseFormat models all the response formats
-// accepted by the what3words public api.
-type ResponseFormat string
-
-const (
-	ResponseFormatJson    ResponseFormat = "json"
-	ResponseFormatGeoJson ResponseFormat = "geojson"
-)
-
 // Convert APIs
 
 // ConvertAPIOpts models all optional options accepted
 // by /v3/convert-to-3wa and /v3/convert-to-coordiates endpoints
 // of the what3words public api,
 type ConvertAPIOpts struct {
-	// Return data format type; can be either json (the default) or geojson
-	Format ResponseFormat
 	// Locale to specify a variant of a language
 	Locale string
 	// A supported 3 word address language as an ISO 639-1 2 letter code.
@@ -37,9 +26,6 @@ type ConvertAPIOpts struct {
 
 func (cto ConvertAPIOpts) asOptionsMap() map[string]string {
 	mapOpts := make(map[string]string)
-	if cto.Format != "" {
-		mapOpts["format"] = string(cto.Format)
-	}
 	if cto.Locale != "" {
 		mapOpts["locale"] = cto.Locale
 	}
@@ -97,10 +83,6 @@ func (ctr convertAPIResponse) GetError() error {
 // Json and GeoJson response structs, based on the
 // Format provided, one will be set while other
 // set to nil
-type ConvertAPIResponse struct {
-	Json    *ConvertAPIJsonResponse
-	GeoJson *ConvertAPIGeoJsonResponse
-}
 
 // AutoSuggest API
 type Circle struct {
@@ -108,8 +90,8 @@ type Circle struct {
 	RadiusKm float64
 }
 
-func (c Circle) String() string {
-	return fmt.Sprintf("%s,%f", c.Center, c.RadiusKm)
+func (c Circle) asQueryParam() string {
+	return fmt.Sprintf("%s,%f", c.Center.AsQueryParam(), c.RadiusKm)
 }
 
 type BoundingBox struct {
@@ -117,7 +99,7 @@ type BoundingBox struct {
 	NorthEast Coordinates
 }
 
-func (bb BoundingBox) String() string {
+func (bb BoundingBox) asQueryParam() string {
 	return fmt.Sprintf("%.6f,%.6f,%.6f,%.6f", bb.SouthWest.Lat, bb.SouthWest.Lng, bb.NorthEast.Lat, bb.NorthEast.Lng)
 }
 
@@ -162,32 +144,33 @@ type AutoSuggestOpts struct {
 	// Use false to disable this setting and receive more suggestions in the sea.
 	PreferLand *bool
 	// Locale to specify a variant of a language
-	Locale string
+	Locale       string
+	NResults     *int
+	NFocusResult *int
 }
 
 func (aso AutoSuggestOpts) asOptionsMap() map[string]string {
 	mapOpts := make(map[string]string)
 	if aso.Focus != nil {
-		mapOpts["focus"] = aso.Focus.String()
+		mapOpts["focus"] = aso.Focus.AsQueryParam()
 	}
 	if len(aso.ClipToCountry) > 0 {
 		mapOpts["clip-to-country"] = strings.Join(aso.ClipToCountry, ",")
 	}
 	if aso.ClipToBoundingBox != nil {
-		mapOpts["clip-to-bounding-box"] = aso.ClipToBoundingBox.String()
+		mapOpts["clip-to-bounding-box"] = aso.ClipToBoundingBox.asQueryParam()
 	}
 	if aso.ClipToCircle != nil {
-		mapOpts["clip-to-circle"] = aso.ClipToCircle.String()
+		mapOpts["clip-to-circle"] = aso.ClipToCircle.asQueryParam()
 	}
 
 	if len(aso.ClipToPolygon) > 0 {
 		pointsStr := make([]string, 0, len(aso.ClipToPolygon))
 		for _, point := range aso.ClipToPolygon {
-			pointsStr = append(pointsStr, point.String())
+			pointsStr = append(pointsStr, point.AsQueryParam())
 		}
 		mapOpts["clip-to-polygon"] = strings.Join(pointsStr, ",")
 	}
-
 	if aso.Language != "" {
 		mapOpts["language"] = aso.Language
 	}
@@ -196,6 +179,12 @@ func (aso AutoSuggestOpts) asOptionsMap() map[string]string {
 	}
 	if aso.Locale != "" {
 		mapOpts["locale"] = aso.Locale
+	}
+	if aso.NResults != nil {
+		mapOpts["n-results"] = strconv.Itoa(*aso.NResults)
+	}
+	if aso.NFocusResult != nil {
+		mapOpts["n-focus-result"] = strconv.Itoa(*aso.NFocusResult)
 	}
 
 	return mapOpts
@@ -225,21 +214,6 @@ func (asr autoSuggestResponse) GetError() error {
 }
 
 // Grid Section API
-
-// GridSectionOpts models all the possible optional options
-// accpeted by the /v3/grid-section endpoint of the what3words public api.
-type GridSectionOpts struct {
-	Format ResponseFormat
-}
-
-func (gso GridSectionOpts) asOptionsMap() map[string]string {
-	mapOpts := make(map[string]string)
-	if gso.Format != "" {
-		mapOpts["format"] = string(gso.Format)
-	}
-	return mapOpts
-}
-
 // GridSectionJsonResponse models the response recieved when
 // format set to json is provided by the /v3/grid-section endpoint
 // of the what3words public api.

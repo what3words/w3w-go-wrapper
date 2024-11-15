@@ -6,11 +6,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
 	w3w "github.com/what3words/w3w-go-wrapper"
-	"github.com/what3words/w3w-go-wrapper/pkg/apis/v3"
+	v3 "github.com/what3words/w3w-go-wrapper/pkg/apis/v3"
 )
 
 var (
@@ -37,7 +38,7 @@ func (m MockAPI) Do(req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func setupSvc(t *testing.T) *w3w.Service {
+func setupSvc(t *testing.T) w3w.Service {
 	apiKey := os.Getenv("X_API_KEY")
 	if apiKey == "" {
 		t.Fatal("ERROR: X_API_KEY is empty or not found")
@@ -49,9 +50,22 @@ func setupSvc(t *testing.T) *w3w.Service {
 
 func TestAPI(t *testing.T) {
 	w3wAPI := setupSvc(t)
-	_, err := w3wAPI.V3.AvailableLanguages(context.Background())
+	_, err := w3wAPI.V3().AvailableLanguages(context.Background())
 	if err != nil {
 		t.Fatalf("ERROR: %+v", err)
+	}
+}
+
+func TestFindPossible3wa(t *testing.T) {
+	w3wAPI := setupSvc(t)
+	source := "Can be found at filled.count.soap and at ///test.fake.words but not at test.fake. or test.fake"
+	pa := w3wAPI.FindPossible3wa(source)
+	expected := []string{"filled.count.soap", "test.fake.words"}
+	if len(pa) != len(expected) {
+		t.Fatalf("ERROR: expected to find %d possible 3 word addresses, but found %d", len(expected), len(pa))
+	}
+	if !reflect.DeepEqual(pa, expected) {
+		t.Fatalf("ERROR: expected to find %v, but found %v", expected, pa)
 	}
 }
 
@@ -61,7 +75,7 @@ func ExampleService() {
 		panic("ERROR: X_API_KEY is empty or not found")
 	}
 	svc := w3w.NewService(apiKey)
-	_, err := svc.V3.AvailableLanguages(context.Background())
+	_, err := svc.V3().AvailableLanguages(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -73,12 +87,12 @@ func ExampleConvertToCoordinates() {
 		panic("ERROR: X_API_KEY is empty or not found")
 	}
 	svc := w3w.NewService(apiKey)
-	resp, err := svc.V3.ConvertToCoordinates(context.Background(), "filled.count.soap", nil)
+	resp, err := svc.V3().ConvertToCoordinatesJson(context.Background(), "filled.count.soap", nil)
 	if err != nil {
 		panic(err)
 	}
 	// Json is the default output format used.
-	fmt.Println(resp.Json.Coordinates)
+	fmt.Println(resp.Coordinates)
 }
 
 func ExampleConvertToCoordinatesLanguage() {
@@ -87,13 +101,13 @@ func ExampleConvertToCoordinatesLanguage() {
 		panic("ERROR: X_API_KEY is empty or not found")
 	}
 	svc := w3w.NewService(apiKey)
-	resp, err := svc.V3.ConvertToCoordinates(context.Background(), "تجتمع.ضباط.ثقافية", &v3.ConvertAPIOpts{
+	resp, err := svc.V3().ConvertToCoordinatesJson(context.Background(), "تجتمع.ضباط.ثقافية", &v3.ConvertAPIOpts{
 		Language: "ar",
 	})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(resp.Json.Coordinates)
+	fmt.Println(resp.Coordinates)
 }
 
 func ExampleConvertToCoordinatesGeoJson() {
@@ -102,14 +116,12 @@ func ExampleConvertToCoordinatesGeoJson() {
 		panic("ERROR: X_API_KEY is empty or not found")
 	}
 	svc := w3w.NewService(apiKey)
-	resp, err := svc.V3.ConvertToCoordinates(context.Background(), "filled.count.soap", &v3.ConvertAPIOpts{
-		Format: v3.ResponseFormatGeoJson,
-	})
+	resp, err := svc.V3().ConvertToCoordinatesGeoJson(context.Background(), "filled.count.soap", nil)
 	if err != nil {
 		panic(err)
 	}
 	// If format GeoJson is not set in options, GeoJson attribute of the response will be set to nil
-	fmt.Println(resp.GeoJson.Features[0].Geometry.Coordinates)
+	fmt.Println(resp.Features[0].Geometry.Coordinates)
 }
 
 func ExampleConvertTo3wa() {
@@ -118,14 +130,14 @@ func ExampleConvertTo3wa() {
 		panic("ERROR: X_API_KEY is empty or not found")
 	}
 	svc := w3w.NewService(apiKey)
-	resp, err := svc.V3.ConvertTo3wa(context.Background(), v3.Coordinates{
+	resp, err := svc.V3().ConvertTo3waJson(context.Background(), v3.Coordinates{
 		Lat: 51.520847,
 		Lng: -0.195521,
 	}, nil)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(resp.Json.Words)
+	fmt.Println(resp.Words)
 }
 
 func ExampleGridSection() {
@@ -134,7 +146,7 @@ func ExampleGridSection() {
 		panic("ERROR: X_API_KEY is empty or not found")
 	}
 	svc := w3w.NewService(apiKey)
-	resp, err := svc.V3.GridSection(context.Background(), v3.BoundingBox{
+	resp, err := svc.V3().GridSectionJson(context.Background(), v3.BoundingBox{
 		SouthWest: v3.Coordinates{
 			Lat: 52.207988,
 			Lng: 0.116126,
@@ -143,11 +155,11 @@ func ExampleGridSection() {
 			Lat: 52.208867,
 			Lng: 0.117540,
 		},
-	}, nil)
+	})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(resp.Json.Lines[0])
+	fmt.Println(resp.Lines[0])
 }
 
 func ExampleAutoSuggest() {
@@ -156,7 +168,7 @@ func ExampleAutoSuggest() {
 		panic("ERROR: X_API_KEY is empty or not found")
 	}
 	svc := w3w.NewService(apiKey)
-	resp, err := svc.V3.AutoSuggest(context.Background(), "filled.count.so", &v3.AutoSuggestOpts{
+	resp, err := svc.V3().AutoSuggest(context.Background(), "filled.count.so", &v3.AutoSuggestOpts{
 		ClipToCircle: &v3.Circle{
 			Center: v3.Coordinates{
 				Lat: 51.520847,
@@ -177,7 +189,7 @@ func ExampleExactWhat3WordsAPIErrors() {
 		panic("ERROR: X_API_KEY is empty or not found")
 	}
 	svc := w3w.NewService(apiKey)
-	_, err := svc.V3.ConvertToCoordinates(context.Background(), "filled", nil)
+	_, err := svc.V3().ConvertToCoordinatesJson(context.Background(), "filled", nil)
 	if err != nil {
 		if err, ok := err.(*v3.ErrorResponse); ok {
 			// Refer v3.ErrorCode for more types of errors
