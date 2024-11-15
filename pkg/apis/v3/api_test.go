@@ -63,7 +63,7 @@ func setupAPI(t *testing.T) v3.API {
 }
 
 func TestConvertToCoordinatesJSON(t *testing.T) {
-	resp, err := setupAPI(t).ConvertToCoordinatesJson(context.Background(), "filled.count.soap", nil)
+	resp, err := setupAPI(t).ConvertToCoordinates(context.Background(), "filled.count.soap", nil)
 	if err != nil {
 		t.Fatalf("ERROR: Failed to get cordinates from API due to err : %v", err)
 	}
@@ -87,14 +87,14 @@ func TestConvertToCoordinatesGeoJSON(t *testing.T) {
 }
 
 func TestConvertToCoordinatesInvalidWords(t *testing.T) {
-	_, err := setupAPI(t).ConvertToCoordinatesJson(context.Background(), "fill.fake.fill", nil)
+	_, err := setupAPI(t).ConvertToCoordinates(context.Background(), "fill.fake.fill", nil)
 	if err == nil {
 		t.Fatal("ERROR: error should be set to BadWords")
 	}
 }
 
 func TestConvertTo3WAJSON(t *testing.T) {
-	resp, err := setupAPI(t).ConvertTo3waJson(context.Background(), core.Coordinates{
+	resp, err := setupAPI(t).ConvertTo3wa(context.Background(), core.Coordinates{
 		Lng: -1.24623,
 		Lat: 51.751172,
 	}, nil)
@@ -125,7 +125,7 @@ func TestConvertTo3WAGeoJSON(t *testing.T) {
 }
 
 func TestConvertTo3WAInvalidWords(t *testing.T) {
-	_, err := setupAPI(t).ConvertToCoordinatesJson(context.Background(), "fill.fake.fill", nil)
+	_, err := setupAPI(t).ConvertToCoordinates(context.Background(), "fill.fake.fill", nil)
 	if err == nil {
 		t.Fatal("ERROR: error should be set to BadWords")
 	}
@@ -137,7 +137,7 @@ func TestConvertTo3WAInvalidWords(t *testing.T) {
 
 func TestGridSectionJSON(t *testing.T) {
 
-	_, err := setupAPI(t).GridSectionJson(context.Background(), v3.BoundingBox{
+	_, err := setupAPI(t).GridSection(context.Background(), v3.BoundingBox{
 		SouthWest: core.Coordinates{
 			Lat: 52.207988,
 			Lng: 0.116126,
@@ -378,7 +378,7 @@ func TestThreadSafety(t *testing.T) {
 	for i := 0; i < count; i++ {
 		go func() {
 			defer wg.Done()
-			_, err := svc.ConvertToCoordinatesJson(context.Background(), "filled.count.soap", nil)
+			_, err := svc.ConvertToCoordinates(context.Background(), "filled.count.soap", nil)
 			if err != nil {
 				t.Errorf("ERROR: Failed to get coordinates from API - %v", err)
 			}

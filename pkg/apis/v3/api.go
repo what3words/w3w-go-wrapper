@@ -36,15 +36,15 @@ type API interface {
 	// and longitude pair to a 3 word address, in the language of your choice. It also returns country,
 	// the bounds of the grid square, a nearby place (such as a local town) and a link to our map site.
 	// Returns response in the `json` format.
-	ConvertTo3waJson(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error)
+	ConvertTo3wa(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error)
 	// ConvertTo3waJson wraps around /v3/convert-to-3wa which will convert a latitude
 	// and longitude pair to a 3 word address, in the language of your choice. It also returns country,
 	// the bounds of the grid square, a nearby place (such as a local town) and a link to our map site.
 	// Returns response in the `geojson` format.
 	ConvertTo3waGeoJson(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIGeoJsonResponse, error)
-	ConvertToCoordinatesJson(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error)
+	ConvertToCoordinates(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error)
 	ConvertToCoordinatesGeoJson(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIGeoJsonResponse, error)
-	GridSectionJson(ctx context.Context, boundingBox BoundingBox) (*GridSectionJsonResponse, error)
+	GridSection(ctx context.Context, boundingBox BoundingBox) (*GridSectionJsonResponse, error)
 	GridSectionGeoJson(ctx context.Context, boundingBox BoundingBox) (*GridSectionGeoJsonResponse, error)
 	AutoSuggest(ctx context.Context, input string, opts *AutoSuggestOpts) (*AutoSuggestResponse, error)
 	AvailableLanguages(ctx context.Context) (*AvailableLanguagesResponse, error)
@@ -143,7 +143,7 @@ func (a api) convertTo3wa(ctx context.Context, coordinates core.Coordinates, opt
 	return &c2cResponse, nil
 }
 
-func (a api) ConvertTo3waJson(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error) {
+func (a api) ConvertTo3wa(ctx context.Context, coordinates core.Coordinates, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error) {
 	resp, err := a.convertTo3wa(ctx, coordinates, opts, "json")
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func (a api) convertToCoordinates(ctx context.Context, words string, opts *Conve
 	return &c2cResponse, nil
 }
 
-func (a api) ConvertToCoordinatesJson(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error) {
+func (a api) ConvertToCoordinates(ctx context.Context, words string, opts *ConvertAPIOpts) (*ConvertAPIJsonResponse, error) {
 	resp, err := a.convertToCoordinates(ctx, words, opts, "json")
 	if err != nil {
 		return nil, err
@@ -287,7 +287,7 @@ func (a api) gridSection(ctx context.Context, boundingBox BoundingBox, format st
 	return &gridSection, nil
 }
 
-func (a api) GridSectionJson(ctx context.Context, boundingBox BoundingBox) (*GridSectionJsonResponse, error) {
+func (a api) GridSection(ctx context.Context, boundingBox BoundingBox) (*GridSectionJsonResponse, error) {
 	resp, err := a.gridSection(ctx, boundingBox, "json")
 	if err != nil {
 		return nil, err
