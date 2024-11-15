@@ -79,12 +79,8 @@ func (ctr convertAPIResponse) GetError() error {
 	return ctr.Error
 }
 
-// ConvertAPIResponse encapsulates 2 pointers to
-// Json and GeoJson response structs, based on the
-// Format provided, one will be set while other
-// set to nil
-
 // AutoSuggest API
+
 type Circle struct {
 	Center   Coordinates
 	RadiusKm float64
@@ -142,10 +138,15 @@ type AutoSuggestOpts struct {
 	Language string
 	// Makes AutoSuggest prefer results on land to those in the sea. This setting is on by default.
 	// Use false to disable this setting and receive more suggestions in the sea.
+	// Set easily using `core.Bool(false)`
 	PreferLand *bool
 	// Locale to specify a variant of a language
-	Locale       string
-	NResults     *int
+	Locale string
+	// The number of AutoSuggest results to return (max 100).
+	// Set easily using `core.Int(10)`
+	NResults *int
+	// Number of results within the results set which will have a focus
+	// Set easily using `core.Int(10)`
 	NFocusResult *int
 }
 
