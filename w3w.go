@@ -174,7 +174,7 @@ func (svc service) IsValid3wa(ctx context.Context, input string) bool {
 	if svc.IsPossible3wa(input) {
 		if resp, err := svc.V3().AutoSuggest(ctx, input, &v3.AutoSuggestOpts{
 			NResults: core.Int(1),
-		}); err != nil {
+		}); err == nil {
 			if len(resp.Suggestions) >= 1 {
 				return resp.Suggestions[0].Words == input
 			}
