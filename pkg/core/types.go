@@ -9,6 +9,6 @@ type Coordinates struct {
 	Lng float64 `json:"lng"`
 }
 
-func (c Coordinates) String() string {
+func (c Coordinates) AsQueryParam() string {
 	return fmt.Sprintf("%.6f,%.6f", c.Lat, c.Lng)
 }

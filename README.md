@@ -68,7 +68,7 @@ func main() {
     svc := w3w.NewService(apiKey)
 
     // Selected option clip to circle, multiple options can be selected, Refer https://developer.what3words.com/public-api/docs#autosuggest for options and limitations. Pass nil if options are not required
-    resp, err := svc.V3.AutoSuggest(context.Background(), "filled.count.so", &v3.AutoSuggestOpts{
+    resp, err := svc.V3().AutoSuggest(context.Background(), "filled.count.so", &v3.AutoSuggestOpts{
 		ClipToCircle: &v3.Circle{
 			Center: v3.Coordinates{
 				Lat: 51.520847,
@@ -104,22 +104,19 @@ func main() {
     apiKey := "<YOUR_API_KEY>"
     svc := w3w.NewService(apiKey)
 
-    resp, err := svc.V3.ConvertToCoordinates(context.Background(), "filled.count.soap", nil)
+    resp, err := svc.V3().ConvertToCoordinates(context.Background(), "filled.count.soap", nil)
     if err != nil {
         panic(err)
     }
     // By default response JSON is used
-    fmt.Println(resp.Json.Coordinates)
+    fmt.Println(resp.Coordinates)
 
     // Getting a geojson response
-    geoResp, err := svc.V3.ConvertToCoordinates(context.Background(), "filled.count.soap", &v3.ConvertAPIOpts{
-		Format: v3.ResponseFormatGeoJson,
-	})
+    geoResp, err := svc.V3().ConvertToCoordinatesGeoJson(context.Background(), "filled.count.soap", nil)
     if err != nil {
         panic(err)
     }
-	// If format GeoJson is not set in options, GeoJson attribute of the response will be set to nil
-	fmt.Println(geoResp.GeoJson.Features[0].Geometry.Coordinates)
+	fmt.Println(geoResp.Features[0].Geometry.Coordinates)
 }
 ```
 
@@ -140,14 +137,14 @@ import (
 func main() {
     apiKey := "<YOUR_API_KEY>"
     svc := w3w.NewService(apiKey)
-	resp, err := svc.V3.ConvertTo3wa(context.Background(), v3.Coordinates{
+	resp, err := svc.V3().ConvertTo3wa(context.Background(), v3.Coordinates{
 		Lat: 51.520847,
 		Lng: -0.195521,
 	}, nil)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(resp.Json.Words)
+	fmt.Println(resp.Words)
 
 }
 ```
@@ -169,7 +166,7 @@ import (
 func main() {
     apiKey := "<YOUR_API_KEY>"
     svc := w3w.NewService(apiKey)
-	resp, err := svc.V3.GridSection(context.Background(), v3.BoundingBox{
+	resp, err := svc.V3().GridSection(context.Background(), v3.BoundingBox{
 		SouthWest: v3.Coordinates{
 			Lat: 52.207988,
 			Lng: 0.116126,
@@ -178,11 +175,11 @@ func main() {
 			Lat: 52.208867,
 			Lng: 0.117540,
 		},
-	}, nil)
+	})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(resp.Json.Lines)
+	fmt.Println(resp.Lines)
 
 }
 ```
@@ -206,10 +203,96 @@ import (
 func main() {
     apiKey := "<YOUR_API_KEY>"
     svc := w3w.NewService(apiKey)
-	resp, err := svc.V3.AvailableLanguages(context.Background())
+	resp, err := svc.V3().AvailableLanguages(context.Background())
 	if err != nil {
 		panic(err)
 	}
     fmt.Println(resp)
+}
+```
+
+### Find Possible 3 Word Addresses
+
+FindPossible3wa searches the string passed in for all substrings in the form of a three word address.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	w3w "github.com/what3words/w3w-go-wrapper"
+)
+
+func main() {
+	apiKey := "<YOUR_API_KEY>"
+	svc := w3w.NewService(apiKey)
+	text := `This is a valid 3 word address filled.count.soap`
+	pa := svc.FindPossible3wa(text)
+	fmt.Println(pa)
+}
+```
+
+### Is Possible 3 Word Address
+
+IsPossible3wa determines if the string passed in is in the form of a three word address.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	w3w "github.com/what3words/w3w-go-wrapper"
+)
+
+func main() {
+	apiKey := "<YOUR_API_KEY>"
+	svc := w3w.NewService(apiKey)
+	pa := svc.IsPossible3wa("filled.count.fake")
+	fmt.Println(pa)
+}
+```
+
+### Did you Mean
+
+DidYouMean determines if the string passed in is almost in the form of a three word address.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	w3w "github.com/what3words/w3w-go-wrapper"
+)
+
+func main() {
+	apiKey := "<YOUR_API_KEY>"
+	svc := w3w.NewService(apiKey)
+	pa := svc.DidYouMean("filled-count-fake")
+	fmt.Println(pa)
+}
+```
+
+### Is Valid 3 word address
+
+IsValid3wa validates the given string as a real three-word address by making a call to the API. The context can be used to cancel the underlying call.
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+
+	w3w "github.com/what3words/w3w-go-wrapper"
+)
+
+func main() {
+	apiKey := "<YOUR_API_KEY>"
+	svc := w3w.NewService(apiKey)
+	pa := svc.IsValid3wa(context.Background(), "filled.count.soap")
+	fmt.Println(pa)
 }
 ```
