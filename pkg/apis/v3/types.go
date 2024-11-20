@@ -203,7 +203,7 @@ type AutoSuggestSuggestion struct {
 	Locale            string `json:"locale"`
 }
 
-// AutoSuggestGeoJsonResponse models the reponse recieved
+// AutoSuggestGeoJsonResponse models the response recieved
 // from the what3words public api autosuggest endpoint
 type AutoSuggestResponse struct {
 	Suggestions []AutoSuggestSuggestion `json:"suggestions,omitempty"`

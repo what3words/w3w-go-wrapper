@@ -177,7 +177,7 @@ func TestGridSectionGeoJSON(t *testing.T) {
 func TestAvailableLanguages(t *testing.T) {
 	_, err := setupAPI(t).AvailableLanguages(context.Background())
 	if err != nil {
-		t.Fatalf("ERROR: Error occured trying to retrieve languages")
+		t.Fatalf("ERROR: Error occurred trying to retrieve languages")
 	}
 }
 
