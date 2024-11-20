@@ -69,7 +69,7 @@ func TestConvertToCoordinatesJSON(t *testing.T) {
 	}
 	var expected v3.ConvertAPIJsonResponse
 	json.Unmarshal([]byte(c2cJson), &expected)
-	if reflect.DeepEqual(expected, *resp) {
+	if !reflect.DeepEqual(expected, *resp) {
 		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected, *resp)
 	}
 }
