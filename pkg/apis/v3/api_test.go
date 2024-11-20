@@ -69,7 +69,7 @@ func TestConvertToCoordinatesJSON(t *testing.T) {
 	}
 	var expected v3.ConvertAPIJsonResponse
 	json.Unmarshal([]byte(c2cJson), &expected)
-	if !reflect.DeepEqual(expected, *resp) {
+	if reflect.DeepEqual(expected, *resp) {
 		t.Fatalf("ERROR: Expected output '%v' recieved '%v'", expected, *resp)
 	}
 }
@@ -213,7 +213,6 @@ const autoSuggestMultiplePolicies = `{"suggestions":[{"country":"GB","nearestPla
 
 func TestAutoSuggest(t *testing.T) {
 	svc := setupAPI(t)
-	preferLand := false
 	asTests := []struct {
 		name     string
 		opts     *v3.AutoSuggestOpts
@@ -297,7 +296,7 @@ func TestAutoSuggest(t *testing.T) {
 		{
 			"PreferLandFalse",
 			&v3.AutoSuggestOpts{
-				PreferLand: &preferLand,
+				PreferLand: core.Bool(false),
 			},
 			autoSuggestPreferLandFalse,
 		},
@@ -366,6 +365,43 @@ func TestAutoSuggest(t *testing.T) {
 				t.Fatalf("ERROR: Expected output '%s' recieved '%s'", test.expected, string(buffer))
 			}
 		})
+	}
+}
+
+var (
+	expectedCoordinates = core.Coordinates{
+		Lat: 51.520847,
+		Lng: -0.195521,
+	}
+	expectedSquare = v3.Sqaure{
+		SouthWest: core.Coordinates{
+			Lat: 51.520833,
+			Lng: -0.195543,
+		},
+		NorthEast: core.Coordinates{
+			Lng: -0.195499,
+			Lat: 51.52086,
+		},
+	}
+)
+
+func TestAutoSuggestWithCoordinates(t *testing.T) {
+	svc := setupAPI(t)
+	resp, err := svc.AutoSuggestWithCoordinates(context.Background(), "filled.count.soa", &v3.AutoSuggestOpts{
+		NResults:      core.Int(1),
+		ClipToCountry: []string{"GB"},
+	})
+	if err != nil {
+		t.Fatalf("ERROR: Failed to get auto suggest from API - %v", err)
+	}
+	if len(resp.Suggestions) != 1 {
+		t.Fatalf("ERROR: Expected number of suggestions to be exactly 1 but got %d", len(resp.Suggestions))
+	}
+	if !reflect.DeepEqual(resp.Suggestions[0].Coordinates, expectedCoordinates) {
+		t.Fatalf("ERROR: Expected api suggestions Coordinates to be %+v got %+v", expectedCoordinates, resp.Suggestions[0].Coordinates)
+	}
+	if !reflect.DeepEqual(resp.Suggestions[0].Square, expectedSquare) {
+		t.Fatalf("ERROR: Expected api suggestions Square to be %+v got %+v", expectedSquare, resp.Suggestions[0].Square)
 	}
 }
 

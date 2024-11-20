@@ -60,13 +60,13 @@ type ConvertAPIGeoJsonResponse struct {
 // ConvertAPIJsonResponse models the format `json` (Default)
 // response returned by the what3words public api convert endpoints.
 type ConvertAPIJsonResponse struct {
-	Country      string                 `json:"country,omitempty"`
-	Square       map[string]Coordinates `json:"square,omitempty"`
-	NearestPlace string                 `json:"nearestPlace,omitempty"`
-	Coordinates  Coordinates            `json:"coordinates,omitempty"`
-	Words        string                 `json:"words,omitempty"`
-	Language     string                 `json:"language,omitempty"`
-	MapUrl       string                 `json:"map,omitempty"`
+	Country      string      `json:"country,omitempty"`
+	Square       Sqaure      `json:"square,omitempty"`
+	NearestPlace string      `json:"nearestPlace,omitempty"`
+	Coordinates  Coordinates `json:"coordinates,omitempty"`
+	Words        string      `json:"words,omitempty"`
+	Language     string      `json:"language,omitempty"`
+	MapUrl       string      `json:"map,omitempty"`
 }
 
 type convertAPIResponse struct {
@@ -90,10 +90,12 @@ func (c Circle) asQueryParam() string {
 	return fmt.Sprintf("%s,%f", c.Center.AsQueryParam(), c.RadiusKm)
 }
 
-type BoundingBox struct {
-	SouthWest Coordinates
-	NorthEast Coordinates
+type Sqaure struct {
+	SouthWest Coordinates `json:"southwest"`
+	NorthEast Coordinates `json:"northeast"`
 }
+
+type BoundingBox Sqaure
 
 func (bb BoundingBox) asQueryParam() string {
 	return fmt.Sprintf("%.6f,%.6f,%.6f,%.6f", bb.SouthWest.Lat, bb.SouthWest.Lng, bb.NorthEast.Lat, bb.NorthEast.Lng)
@@ -191,18 +193,31 @@ func (aso AutoSuggestOpts) asOptionsMap() map[string]string {
 	return mapOpts
 }
 
+type AutoSuggestSuggestion struct {
+	Country           string `json:"country"`
+	NearestPlace      string `json:"nearestPlace"`
+	Words             string `json:"words"`
+	DistanceToFocusKm int    `json:"distanceToFocusKm"`
+	Rank              int    `json:"rank"`
+	Language          string `json:"language"`
+	Locale            string `json:"locale"`
+}
+
 // AutoSuggestGeoJsonResponse models the reponse recieved
 // from the what3words public api autosuggest endpoint
 type AutoSuggestResponse struct {
-	Suggestions []struct {
-		Country           string `json:"country"`
-		NearestPlace      string `json:"nearestPlace"`
-		Words             string `json:"words"`
-		DistanceToFocusKm int    `json:"distanceToFocusKm"`
-		Rank              int    `json:"rank"`
-		Language          string `json:"language"`
-		Locale            string `json:"locale"`
-	} `json:"suggestions,omitempty"`
+	Suggestions []AutoSuggestSuggestion `json:"suggestions,omitempty"`
+}
+
+type AutoSuggestWithCoordinatesSuggestion struct {
+	AutoSuggestSuggestion
+	Coordinates Coordinates `json:"coordinates"`
+	Square      Sqaure      `json:"square"`
+	MapURL      string      `json:"map"`
+}
+
+type AutoSuggestWithCoordinatesResponse struct {
+	Suggestions []AutoSuggestWithCoordinatesSuggestion `json:"suggestions,omitempty"`
 }
 
 type autoSuggestResponse struct {
@@ -211,6 +226,15 @@ type autoSuggestResponse struct {
 }
 
 func (asr autoSuggestResponse) GetError() error {
+	return asr.Error
+}
+
+type autoSuggestWithCoordinatesResponse struct {
+	AutoSuggestWithCoordinatesResponse
+	Error *ErrorResponse `json:"error"`
+}
+
+func (asr autoSuggestWithCoordinatesResponse) GetError() error {
 	return asr.Error
 }
 
