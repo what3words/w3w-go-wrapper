@@ -109,6 +109,13 @@ type API interface {
 	// the language parameter is optional, and AutoSuggest will work well even without a language parameter.
 	// However, for voice input the language should always be specified.
 	AutoSuggest(ctx context.Context, input string, opts *AutoSuggestOpts) (*AutoSuggestResponse, error)
+	// AutoSuggestWithCoordinates provides functionality similar to AutoSuggest, 
+	// with the added feature of including coordinates for each suggestion in the response.
+	//
+	// This method is particularly useful when detailed location information is required
+	// along with the suggested 3 word addresses. It returns an enriched response,
+	// making it easier to associate suggestions with their precise geographic locations.
+	AutoSuggestWithCoordinates(ctx context.Context, input string, opts *AutoSuggestOpts) (*AutoSuggestWithCoordinatesResponse, error)
 	// AvailableLanguages wraps around /v3/available-languages which will
 	// retrieve a list of all available 3 word address languages,
 	// including the ISO 3166-1 alpha-2 2 letter code, English name and native name.
@@ -322,6 +329,29 @@ func (a api) AutoSuggest(ctx context.Context, input string, opts *AutoSuggestOpt
 		return nil, err
 	}
 	return &autoSuggest.AutoSuggestResponse, nil
+}
+
+func (a api) AutoSuggestWithCoordinates(ctx context.Context, input string, opts *AutoSuggestOpts) (*AutoSuggestWithCoordinatesResponse, error) {
+	var autoSuggest autoSuggestWithCoordinatesResponse
+	queryParams := make(map[string]string)
+	queryParams["input"] = input
+	if opts != nil {
+		mOpts := opts.asOptionsMap()
+		maps.Copy(queryParams, mOpts)
+	}
+	err := core.MakeGetRequest(
+		ctx,
+		a.client,
+		a.baseURL,
+		queryParams,
+		a.headers,
+		&autoSuggest,
+		"autosuggest-with-coordinates",
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &autoSuggest.AutoSuggestWithCoordinatesResponse, nil
 }
 
 func (a api) gridSection(ctx context.Context, boundingBox BoundingBox, format string) (*gridSectionResponse, error) {

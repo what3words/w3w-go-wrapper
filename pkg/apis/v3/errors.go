@@ -25,7 +25,7 @@ type ErrorResponse struct {
 	// Code can be ustized to programatically determine
 	// the error.
 	Code ErrorCode `json:"code"`
-	// Message is intended to be helpfull human readable
+	// Message is intended to be helpful human readable
 	// version of the error code.
 	Message string `json:"message"`
 }

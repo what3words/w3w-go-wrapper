@@ -11,7 +11,7 @@ import (
 )
 
 // MakeGetRequest makes a GET request to the specified URL.
-// Reponses are unmarshalled into the response parameter, it
+// Responses are unmarshalled into the response parameter, it
 // is expected that the response parameter is a pointer to a struct
 // which implements the ResponseErrorReader interface.
 func MakeGetRequest(
